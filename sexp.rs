@@ -1,20 +1,27 @@
 
+#[deriving (ToStr)]
 enum Sexp {
     List(@Sexp_List),
     Number(int),
     String(@str)
 }
 
+#[deriving (ToStr)]
 enum Sexp_List {
     Null,
     Cons(@Sexp,@Sexp_List)
 }
 
 fn main () {
-    write_sexp( l([n(1), s(@"two")]) );
+    let sexp12 = l([n(1), s(@"two")]);
+    write_sexp( sexp12 );
     println("");
-    write_sexp( l([n(1), l([s(@"two"), l([]), n(3)]), s(@"four")]) );
+    println(sexp12.to_str());
+
+    let sexp1234 = l([n(1), l([s(@"two"), l([]), n(3)]), s(@"four")]);
+    write_sexp( sexp1234 );
     println("");
+    println(sexp1234.to_str());
 }
 
 fn s(st:@str) -> Sexp { String(st) }
