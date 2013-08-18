@@ -1,5 +1,5 @@
 
-#[deriving (Clone)]
+#[deriving (Clone,ToStr)]
 enum List<E> { Null, Cons( E, @List<E> ) }
 
 fn null<E:'static>() -> List<E> { Null }
@@ -38,4 +38,15 @@ fn append_lists<E:Clone+'static>( xss:List<List<E>> ) -> List<E> {
     foldr( append, null(), xss )
 }
 
-fn main () {}
+fn map<A:Clone+'static,B:'static>( f:&fn(A)->B, xs:List<A> ) -> List<B> {
+    foldr( |x,ys| cons(f(x),ys), null(), xs )
+}
+
+fn main () {
+    let fwd = cons(1,cons(2,null()));
+    println(fwd.to_str());
+    let rev = reverse(fwd);
+    println(rev.to_str());
+    let add = map(|x|x-1,rev);
+    println(add.to_str());
+}
