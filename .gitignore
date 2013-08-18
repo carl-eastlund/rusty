@@ -1,0 +1,12 @@
+
+# Rust generated files
+*.dSYM
+
+# Emacs generated files
+*~
+.\#*
+\#*\#
+
+# Mac OS X generated files
+.DS_Store
+__MACOSX
