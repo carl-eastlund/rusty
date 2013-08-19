@@ -50,7 +50,9 @@ macro_rules! make_uint_discrim {
     }
 }
 
-make_uint_discrim!(u16_discrim,u16,u8_discrim,u8,256)
+make_uint_discrim!(u16_discrim,u16,u8_discrim,u8,(1u16 << 8))
+make_uint_discrim!(u32_discrim,u32,u16_discrim,u16,(1u32 << 16))
+make_uint_discrim!(u64_discrim,u64,u32_discrim,u32,(1u64 << 32))
 
 macro_rules! make_int_discrim {
     ($name:ident, $i:ident, $help:ident, $u:ident, $offset:expr) => {
@@ -64,7 +66,10 @@ macro_rules! make_int_discrim {
     }
 }
 
-make_int_discrim!(i16_discrim,i16,u16_discrim,u16,32768)
+make_int_discrim!(i8_discrim,i8,u8_discrim,u8,(1i8 << 7))
+make_int_discrim!(i16_discrim,i16,u16_discrim,u16,(1i16 << 15))
+make_int_discrim!(i32_discrim,i32,u32_discrim,u32,(1i32 << 31))
+make_int_discrim!(i64_discrim,i64,u64_discrim,u64,(1i64 << 63))
 
 fn main () {
     let numbers =
