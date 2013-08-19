@@ -11,13 +11,10 @@ fn dsort<T:Clone>( disc : Discrim<T,T>, xs : ~[T] ) -> ~[T] {
         }
     };
     let groups = disc(pairs);
-    let sorted = do vec::build_sized(n) |push| {
-        for vs in groups.iter() {
-            for v in vs.iter() {
-                push(v.clone());
-            }
-        }
-    };
+    let mut sorted = vec::with_capacity(n);
+    for vs in groups.iter() {
+        sorted.push_all(*vs);
+    }
     sorted
 }
 
