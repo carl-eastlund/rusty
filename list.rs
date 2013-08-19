@@ -85,6 +85,7 @@ fn main () {
     println(rev.to_str());
     let add : List<u8> = map(|x|x-1,rev);
     println(add.to_str());
-    // let ord : List<u8> = dsort((),add);
-    // println(ord.to_str());
+    let i_d : @Discrim<u8,u8> = @();
+    let ord : List<u8> = dsort(i_d,add);
+    println(ord.to_str());
 }
