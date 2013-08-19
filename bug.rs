@@ -1,25 +1,59 @@
 
 #[deriving (Clone,ToStr)]
-enum Type<T> { Constant }
+enum List<E> { Empty, Cons( @E, @List<E> ) }
 
-trait Trait<K,V> {
-    fn method(&self,Type<(K,V)>) -> ();
-}
+fn is_empty<E>( xs:List<E> ) -> bool { match xs { Empty => true, _ => false } }
+fn empty<E>() -> List<E> { Empty }
+fn cons<E:'static>( x:E, xs:List<E> ) -> List<E> { Cons( @x, @xs ) }
 
-impl<V:Clone+'static> Trait<u8,V> for () {
-    fn method( &self, xs:Type<(u8,V)> ) -> () {
-        *self; @xs;
+fn foldl<E:Clone+'static,R>( f:&fn(E,R)->R, mut r:R, mut xs:List<E> ) -> R {
+    loop {
+        match xs {
+            Empty => { return r }
+            Cons( e, ys ) => {
+                r = f((*e).clone(), r);
+                xs = (*ys).clone();
+                loop
+            }
+        }
     }
 }
 
-fn function<V:Clone+'static>( x:@Trait<V,V> ) -> () {
-    x.method(Constant);
+fn revapp<E:Clone+'static>( xs:List<E>, ys:List<E> ) -> List<E> {
+    foldl( cons, ys, xs )
 }
 
-fn instance<V:Clone+'static>() -> @Trait<u8,V> {
-    @() as @Trait<u8,V>
+fn reverse<E:Clone+'static>( xs:List<E> ) -> List<E> {
+    revapp( xs, empty() )
+}
+
+fn foldr<E:Clone+'static,R>( f:&fn(E,R)->R, v:R, xs:List<E> ) -> R {
+    foldl( f, v, reverse(xs) )
+}
+
+fn append<E:Clone+'static>( xs:List<E>, ys:List<E> ) -> List<E> {
+    foldr( cons, ys, xs )
+}
+
+fn append_lists<E:Clone+'static>( xss:List<List<E>> ) -> List<E> {
+    foldr( append, empty(), xss )
+}
+
+fn map<A:Clone+'static,B:'static>( f:&fn(A)->B, xs:List<A> ) -> List<B> {
+    foldr( |x,ys| cons(f(x),ys), empty(), xs )
+}
+
+type Discrim<'self,K,V> = &'self fn(List<(K,V)>) -> List<List<V>>;
+
+fn dsort<'self,E:Clone+'static>( d:Discrim<'self,E,E>, xs:List<E> ) -> List<E> {
+    append_lists( d( map( |x| ( x.clone(), x.clone() ), xs ) ) )
 }
 
 fn main () {
-    function(instance());
+    let fwd : List<u8> = cons(1,cons(2,empty()));
+    println(fwd.to_str());
+    let rev : List<u8> = reverse(fwd);
+    println(rev.to_str());
+    let add : List<u8> = map(|x|x-1,rev);
+    println(add.to_str());
 }
