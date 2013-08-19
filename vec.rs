@@ -1,5 +1,6 @@
 
 use std::vec;
+use std::rand;
 
 type Discrim<K,V> = &'static fn( ~[(K,V)] ) -> ~[~[V]];
 
@@ -71,10 +72,27 @@ make_int_discrim!(i16_discrim,i16,u16_discrim,u16,(1i16 << 15))
 make_int_discrim!(i32_discrim,i32,u32_discrim,u32,(1i32 << 31))
 make_int_discrim!(i64_discrim,i64,u64_discrim,u64,(1i64 << 63))
 
+macro_rules! make_cast_discrim {
+    ($name:ident, $orig:ident, $help:ident, $cast:ident) => {
+        fn $name<T>( pairs : ~[($orig,T)] ) -> ~[~[T]] {
+            let mut cast_pairs = vec::with_capacity(pairs.len());
+            for (k,v) in pairs.move_iter() {
+                cast_pairs.push( ( k as $cast, v ) );
+            }
+            $help(cast_pairs)
+        }
+    }
+}
+
+make_cast_discrim!(int_discrim,int,i64_discrim,i64)
+make_cast_discrim!(uint_discrim,uint,u64_discrim,u64)
+
 fn main () {
-    let numbers =
-        ~[-1025i16, 1i16, 256i16, 3i16, -1024i16, 2i16, 512i16, -1026i16];
+    let mut numbers = ~[];
+    for _ in range(0,rand::random::<u8>()) {
+        numbers.push( rand::random::<int>() )
+    }
     println( numbers.to_str() );
-    let sorted = dsort( i16_discrim, numbers );
+    let sorted = dsort( int_discrim, numbers );
     println( sorted.to_str() );
 }
