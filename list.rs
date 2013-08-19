@@ -1,4 +1,5 @@
 
+#[deriving (ToStr)]
 enum List<E> { Empty, Cons( @E, @List<E> ) }
 
 impl<E> Iterator<@E> for List<E> {
@@ -61,6 +62,14 @@ impl<E:'static> List<List<E>> {
 
 }
 
+fn to_list<T:Clone+'static>( vec : &[T] ) -> List<T> {
+    let mut xs = Empty;
+    for x in vec.rev_iter() {
+        xs = Cons( @((*x).clone()), @xs );
+    }
+    xs
+}
+
 type Discrim<'self,K,V> = &'self fn( List<(K,V)> ) -> List<List<V>>;
 
 impl<'self, E:Clone+'static> List<E> {
@@ -72,4 +81,21 @@ impl<'self, E:Clone+'static> List<E> {
 
 }
 
-fn main () {}
+fn u8_discrim<V:Clone+'static>( mut xs : List<(u8,V)> ) -> List<List<V>> {
+    let mut vec = [ Empty, ..256 ];
+    for @(k,ref v) in xs {
+        vec[k] = Cons(@((*v).clone()),@vec[k]);
+    }
+    let mut xss = Empty;
+    for ys in vec.rev_iter() {
+        match *ys {
+            Empty => {}
+            ys => { xss = Cons( @ys, @xss ) }
+        }
+    }
+    xss
+}
+
+fn main () {
+    println(to_list([3u8,1u8,4u8,1u8,5u8]).dsort(u8_discrim).to_str());
+}
