@@ -36,9 +36,9 @@ macro_rules! make_uint_discrim {
         fn $name<T>( pairs : ~[($big,T)] ) -> ~[~[T]] {
             let n = pairs.len();
             let mut split = vec::with_capacity(n);
-            let x = $factor;
+            let fact = $factor;
             for ( k , v ) in pairs.move_iter() {
-                split.push( ( (k / x) as $lil, ( (k % x) as $lil, v ) ) );
+                split.push( ( (k / fact) as $lil, ( (k % fact) as $lil, v ) ) );
             }
             let groups = $help(split);
             let mut result = ~[];
@@ -52,13 +52,19 @@ macro_rules! make_uint_discrim {
 
 make_uint_discrim!(u16_discrim,u16,u8_discrim,u8,256)
 
-fn i16_discrim<T>( pairs : ~[(i16,T)] ) -> ~[~[T]] {
-    let mut u16_pairs = vec::with_capacity(pairs.len());
-    for (k,v) in pairs.move_iter() {
-        u16_pairs.push( ( (k+32768) as u16, v ) );
+macro_rules! make_int_discrim {
+    ($name:ident, $i:ident, $help:ident, $u:ident, $offset:expr) => {
+        fn $name<T>( pairs : ~[($i,T)] ) -> ~[~[T]] {
+            let mut u_pairs = vec::with_capacity(pairs.len());
+            for (k,v) in pairs.move_iter() {
+                u_pairs.push( ( (k+$offset) as $u, v ) );
+            }
+            $help(u_pairs)
+        }
     }
-    u16_discrim(u16_pairs)
 }
+
+make_int_discrim!(i16_discrim,i16,u16_discrim,u16,32768)
 
 fn main () {
     let numbers =
