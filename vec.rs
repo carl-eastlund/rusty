@@ -31,9 +31,32 @@ fn u8_discrim<T>( pairs : ~[(u8,T)] ) -> ~[~[T]] {
     vec
 }
 
+fn u16_discrim<T>( pairs : ~[(u16,T)] ) -> ~[~[T]] {
+    let n = pairs.len();
+    let mut split = vec::with_capacity(n);
+    for ( k , v ) in pairs.move_iter() {
+        split.push( ( (k / 256) as u8, ( (k % 256) as u8, v ) ) );
+    }
+    let groups = u8_discrim(split);
+    let mut result = ~[];
+    for u8_pairs in groups.move_iter() {
+        result.push_all_move(u8_discrim(u8_pairs));
+    }
+    result
+}
+
+fn i16_discrim<T>( pairs : ~[(i16,T)] ) -> ~[~[T]] {
+    let mut u16_pairs = vec::with_capacity(pairs.len());
+    for (k,v) in pairs.move_iter() {
+        u16_pairs.push( ( (k+32768) as u16, v ) );
+    }
+    u16_discrim(u16_pairs)
+}
+
 fn main () {
-    let two_pi = ~[6u8,2u8,8u8,3u8,1u8];
-    println( two_pi.to_str() );
-    let sorted = dsort( u8_discrim, two_pi );
+    let numbers =
+        ~[-1025i16, 1i16, 256i16, 3i16, -1024i16, 2i16, 512i16, -1026i16];
+    println( numbers.to_str() );
+    let sorted = dsort( i16_discrim, numbers );
     println( sorted.to_str() );
 }
