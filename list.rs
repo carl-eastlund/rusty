@@ -78,6 +78,10 @@ fn dsort<V:Clone+'static>( d:@Discrim<V,V>, xs:List<V> ) -> List<V> {
     append_lists(d.discrim(map(|x|(x.clone(),x.clone()),xs)))
 }
 
+fn u8_disc<V:Clone+'static>() -> @Discrim<u8,V> {
+    @() as @Discrim<u8,V>
+}
+
 fn main () {
     let fwd : List<u8> = cons(1,cons(2,empty()));
     println(fwd.to_str());
@@ -85,7 +89,6 @@ fn main () {
     println(rev.to_str());
     let add : List<u8> = map(|x|x-1,rev);
     println(add.to_str());
-    let i_d : @Discrim<u8,u8> = @();
-    let ord : List<u8> = dsort(i_d,add);
+    let ord : List<u8> = dsort(u8_disc(),add);
     println(ord.to_str());
 }

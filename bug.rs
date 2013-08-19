@@ -8,6 +8,6 @@ impl<T> Thing<T> for () {
 }
 
 fn main () {
-    let x : @Thing<u8> = ();
+    let x = @() as @Thing<u8>;
     x.ignore()
 }
