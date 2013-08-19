@@ -35,6 +35,8 @@ fn u8_discrim<T>( pairs : ~[(u8,T)] ) -> ~[~[T]] {
 }
 
 fn main () {
-    let two_pi = [6u8,2u8,8u8,3u8,1u8];
-    println(two_pi.to_str());
+    let two_pi = ~[6u8,2u8,8u8,3u8,1u8];
+    println( two_pi.to_str() );
+    let sorted = dsort( u8_discrim, two_pi );
+    println( sorted.to_str() );
 }
