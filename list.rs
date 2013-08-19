@@ -42,11 +42,44 @@ fn map<A:Clone+'static,B:'static>( f:&fn(A)->B, xs:List<A> ) -> List<B> {
     foldr( |x,ys| cons(f(x),ys), null(), xs )
 }
 
+trait Discrim<K,V> {
+    fn discrim(&self,List<(K,V)>) -> List<List<V>>;
+}
+
+impl<V:Clone+'static> Discrim<u8,V> for () {
+    fn discrim( &self, mut xs:List<(u8,V)> ) -> List<List<V>> {
+        let mut vec = [Null, ..256];
+        loop {
+            match xs {
+                Null => {}
+                Cons( (k,v), ys ) => {
+                    vec[k] = cons(v,vec[k]);
+                    xs = *ys;
+                    loop
+                }
+            }
+        }
+        let mut vss = Null;
+        for i in vec.rev_iter() {
+            match *i {
+                Null => {}
+                vs => { vss = cons(reverse(vs), vss) }
+            }
+        }
+        vss
+    }
+}
+
+fn dsort<V:Clone+'static>( d:@Discrim<V,V>, xs:List<V> ) -> List<V> {
+    append_lists(d.discrim(map(|x|(x.clone(),x.clone()),xs)))
+}
+
 fn main () {
-    let fwd = cons(1,cons(2,null()));
+    let fwd : List<u8> = cons(1,cons(2,null()));
     println(fwd.to_str());
-    let rev = reverse(fwd);
+    let rev : List<u8> = reverse(fwd);
     println(rev.to_str());
-    let add = map(|x|x-1,rev);
+    let add : List<u8> = map(|x|x-1,rev);
     println(add.to_str());
+    let ord : List<u8> = dsort((),add);
 }
