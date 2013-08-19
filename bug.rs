@@ -1,25 +1,25 @@
 
 #[deriving (Clone,ToStr)]
-enum List<E> { Empty }
+enum Type<T> { Constant }
 
-trait Discrim<K,V> {
-    fn discrim(&self,List<(K,V)>) -> ();
+trait Trait<K,V> {
+    fn method(&self,Type<(K,V)>) -> ();
 }
 
-impl<V:Clone+'static> Discrim<u8,V> for () {
-    fn discrim( &self, xs:List<(u8,V)> ) -> () {
+impl<V:Clone+'static> Trait<u8,V> for () {
+    fn method( &self, xs:Type<(u8,V)> ) -> () {
         *self; @xs;
     }
 }
 
-fn dsort<V:Clone+'static>( d:@Discrim<V,V> ) -> () {
-    d.discrim(Empty);
+fn function<V:Clone+'static>( x:@Trait<V,V> ) -> () {
+    x.method(Constant);
 }
 
-fn u8_disc<V:Clone+'static>() -> @Discrim<u8,V> {
-    @() as @Discrim<u8,V>
+fn instance<V:Clone+'static>() -> @Trait<u8,V> {
+    @() as @Trait<u8,V>
 }
 
 fn main () {
-    dsort(u8_disc());
+    function(instance());
 }
