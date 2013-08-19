@@ -1,10 +1,13 @@
 
-enum Maybe<V> { Yes(@V), No }
-
-fn wrapped<V>( m : Maybe<V> ) -> Maybe<V> {
-    let mut v : [Maybe<V>, ..8] = [No, ..8];
-    v[1] = m;
-    v[0]
+trait Thing<T> {
+    fn ignore(self) -> ();
 }
 
-fn main () {}
+impl<T> Thing<T> for () {
+    fn ignore(self) -> () { self }
+}
+
+fn main () {
+    let x : @Thing<u8> = ();
+    x.ignore()
+}
