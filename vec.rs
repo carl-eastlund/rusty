@@ -31,19 +31,26 @@ fn u8_discrim<T>( pairs : ~[(u8,T)] ) -> ~[~[T]] {
     vec
 }
 
-fn u16_discrim<T>( pairs : ~[(u16,T)] ) -> ~[~[T]] {
-    let n = pairs.len();
-    let mut split = vec::with_capacity(n);
-    for ( k , v ) in pairs.move_iter() {
-        split.push( ( (k / 256) as u8, ( (k % 256) as u8, v ) ) );
+macro_rules! make_uint_discrim {
+    ($name:ident, $big:ident, $help:ident, $lil:ident, $factor:expr) => {
+        fn $name<T>( pairs : ~[($big,T)] ) -> ~[~[T]] {
+            let n = pairs.len();
+            let mut split = vec::with_capacity(n);
+            let x = $factor;
+            for ( k , v ) in pairs.move_iter() {
+                split.push( ( (k / x) as $lil, ( (k % x) as $lil, v ) ) );
+            }
+            let groups = $help(split);
+            let mut result = ~[];
+            for lil_pairs in groups.move_iter() {
+                result.push_all_move($help(lil_pairs));
+            }
+            result
+        }
     }
-    let groups = u8_discrim(split);
-    let mut result = ~[];
-    for u8_pairs in groups.move_iter() {
-        result.push_all_move(u8_discrim(u8_pairs));
-    }
-    result
 }
+
+make_uint_discrim!(u16_discrim,u16,u8_discrim,u8,256)
 
 fn i16_discrim<T>( pairs : ~[(i16,T)] ) -> ~[~[T]] {
     let mut u16_pairs = vec::with_capacity(pairs.len());
