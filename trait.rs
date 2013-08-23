@@ -245,9 +245,38 @@ Disc<&'self[K],V> for Vec_Disc<D> {
 
 }
 
+struct Char_Disc;
+struct Str_Disc;
+
+impl<T> Disc<char,T> for Char_Disc {
+
+    fn disc( &self, pairs : ~[(char,T)] ) -> ~[~[T]] {
+        Map_Disc{
+            key: |c:char| c as u32,
+            disc: U32_Disc
+        }.disc( pairs )
+    }
+
+}
+
+impl<'self,V> Disc<&'self str,V> for Str_Disc {
+
+    fn disc( &self, pairs : ~[(&str,V)] ) -> ~[~[V]] {
+        let iter_disc = Iter_Disc{ elem: Char_Disc };
+        let str_iter = |s:&str| s.iter();
+        let map_disc = Map_Disc{ key: str_iter, disc: iter_disc };
+        map_disc.disc( pairs )
+    }
+
+}
+
 fn main () {
-    let input = ~[&[3,1,4], &[], &[3,1,4,1,5], &[1,2,3]];
-    println( input.to_str() );
-    let output = disc_sort( Vec_Disc{ elem: Int_Disc }, input );
-    println( output.to_str() );
+    let strs = &[&"cat",&"bat",&"catch",&"batch",&"botch",&"car"];
+    println( strs.to_str() );
+    let sorted_strs = disc_sort( Str_Disc, strs );
+    println( sorted_strs.to_str() );
+    let vecs = &[&[2],&[1],&[2,1],&[1,2],&[3,0],&[3]];
+    println( vecs.to_str() );
+    let sorted_vecs = disc_sort( Vec_Disc{ elem: Int_Disc }, vecs );
+    println( sorted_vecs.to_str() );
 }
