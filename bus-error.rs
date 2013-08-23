@@ -25,19 +25,6 @@ fn vec_collapse_move<T>( xss : ~[~[T]] ) -> ~[T] {
     combined
 }
 
-fn vec_partition_move<T>( xs : ~[T], f : &fn(&T)->bool ) -> (~[T],~[T]) {
-    let mut pass = ~[];
-    let mut fail = ~[];
-    for x in xs.move_iter() {
-        if f(&x) {
-            pass.push(x);
-        } else {
-            fail.push(x);
-        }
-    }
-    (pass,fail)
-}
-
 trait Discrim<K,V> {
 
     fn discrim( &self, ~[(K,V)] ) -> ~[~[V]];
@@ -61,21 +48,12 @@ impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
 
 }
 
-struct U8_Discrim;
+struct Unit_Discrim;
 
-impl<T> Discrim<u8,T> for U8_Discrim {
+impl<T> Discrim<(),T> for Unit_Discrim {
 
-    fn discrim( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
-        let mut buckets = do vec::build_sized(256) |push| {
-            for _ in range(0,256) {
-                push(~[]);
-            }
-        };
-        for (k,v) in pairs.move_iter() {
-            buckets[k].push(v);
-        }
-        do buckets.retain |bucket| { bucket.len() > 0 };
-        buckets
+    fn discrim( &self, pairs : ~[((),T)] ) -> ~[~[T]] {
+        ~[ vec_map_move( pairs, |(_,x)| x ) ]
     }
 
 }
@@ -138,6 +116,6 @@ Discrim<~[K],V> for Vector_Discrim<D> {
 fn main () {
     let input = ~[];
     println("start");
-    discrim_sort( Vector_Discrim{ elem: U8_Discrim }, input );
+    discrim_sort( Vector_Discrim{ elem: Unit_Discrim }, input );
     println("finish");
 }
