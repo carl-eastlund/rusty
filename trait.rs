@@ -231,10 +231,23 @@ Disc<~[K],V> for Owned_Vec_Disc<D> {
 
 }
 
+struct Vec_Disc<D>{ elem: D }
+
+impl<'self,K:Clone,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
+Disc<&'self[K],V> for Vec_Disc<D> {
+
+    fn disc( &self, pairs : ~[(&[K],V)] ) -> ~[~[V]] {
+        Map_Disc{
+            key: |x:&[K]| x.to_owned(),
+            disc: Owned_Vec_Disc{ elem: &self.elem }
+        }.disc( pairs )
+    }
+
+}
+
 fn main () {
-    let input = ~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]];
+    let input = ~[&[3,1,4], &[], &[3,1,4,1,5], &[1,2,3]];
     println( input.to_str() );
-    let output = disc_sort( Owned_Vec_Disc{ elem: Int_Disc }, input );
-    println( input.to_str() );
+    let output = disc_sort( Vec_Disc{ elem: Int_Disc }, input );
     println( output.to_str() );
 }
