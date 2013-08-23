@@ -110,24 +110,30 @@ macro_rules! make_int_discrim {
     }
 }
 
+macro_rules! make_cast_discrim {
+    ($name:ident,$from:ident,$help:ident,$to:ident) => {
+        impl<T> Discrim<$from,T> for $name {
+            fn discrim( &self, pairs : ~[($from,T)] ) -> ~[~[T]] {
+                Map_Discrim{
+                    key: |x:$from| x as $to,
+                    discrim: $help
+                }.discrim(pairs)
+            }
+        }
+    }
+}
+
 struct U8_Discrim;
 struct U16_Discrim;
 struct U32_Discrim;
 struct U64_Discrim;
+struct UInt_Discrim;
 
 struct I8_Discrim;
 struct I16_Discrim;
 struct I32_Discrim;
 struct I64_Discrim;
-
-make_uint_discrim!(U16_Discrim,u16,U8_Discrim,u8,1u16<<8)
-make_uint_discrim!(U32_Discrim,u32,U16_Discrim,u16,1u32<<16)
-make_uint_discrim!(U64_Discrim,u64,U32_Discrim,u32,1u64<<32)
-
-make_int_discrim!(I8_Discrim,i8,U8_Discrim,u8)
-make_int_discrim!(I16_Discrim,i16,U16_Discrim,u16)
-make_int_discrim!(I32_Discrim,i32,U32_Discrim,u32)
-make_int_discrim!(I64_Discrim,i64,U64_Discrim,u64)
+struct Int_Discrim;
 
 impl<T> Discrim<u8,T> for U8_Discrim {
 
@@ -146,9 +152,21 @@ impl<T> Discrim<u8,T> for U8_Discrim {
 
 }
 
+make_uint_discrim!(U16_Discrim,u16,U8_Discrim,u8,1u16<<8)
+make_uint_discrim!(U32_Discrim,u32,U16_Discrim,u16,1u32<<16)
+make_uint_discrim!(U64_Discrim,u64,U32_Discrim,u32,1u64<<32)
+
+make_int_discrim!(I8_Discrim,i8,U8_Discrim,u8)
+make_int_discrim!(I16_Discrim,i16,U16_Discrim,u16)
+make_int_discrim!(I32_Discrim,i32,U32_Discrim,u32)
+make_int_discrim!(I64_Discrim,i64,U64_Discrim,u64)
+
+make_cast_discrim!(Int_Discrim,int,I64_Discrim,i64)
+make_cast_discrim!(UInt_Discrim,uint,U64_Discrim,u64)
+
 fn main () {
-    let input = ~[-257i64, -65536i64, -1i64, -0i64, -65537i64, -256i64];
+    let input = ~[-257, -65536, -1, -0, -65537, -256];
     println( input.to_str() );
-    let output = discrim_sort( I64_Discrim, input );
+    let output = discrim_sort( Int_Discrim, input );
     println( output.to_str() );
 }
