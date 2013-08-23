@@ -196,7 +196,7 @@ Discrim<I,V> for Iterator_Discrim<D> {
                         Some(e) => { work_group.push( (e,(i,v)) ) }
                     }
                 }
-                if( done.len() > 0 ) {
+                if( done_group.len() > 0 ) {
                     done.push(done_group);
                 }
                 let todo_groups = self.elem.discrim(work_group);
