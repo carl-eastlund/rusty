@@ -206,9 +206,9 @@ Discrim<~[K],V> for Vector_Discrim<D> {
 }
 
 fn main () {
-    let input = ~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]];
+    let input = ~[~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]]];
     println( input.to_str() );
-    let output = discrim_sort( Vector_Discrim{ elem: Int_Discrim }, input );
+    let output = discrim_sort( Vector_Discrim{ elem: Vector_Discrim{ elem: Int_Discrim } }, input );
     println( input.to_str() );
     println( output.to_str() );
 }
