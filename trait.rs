@@ -72,14 +72,6 @@ impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
 }
 
 struct U8_Discrim;
-struct U16_Discrim;
-struct U32_Discrim;
-struct U64_Discrim;
-
-fn split_u16( x:u16 ) -> (u8,u8) {
-    let (a,b) = x.div_rem(&256u16);
-    (a as u8, b as u8)
-}
 
 impl<T> Discrim<u8,T> for U8_Discrim {
 
@@ -98,16 +90,32 @@ impl<T> Discrim<u8,T> for U8_Discrim {
 
 }
 
-impl<T> Discrim<u16,T> for U16_Discrim {
-
-    fn discrim( &self, pairs : ~[(u16,T)] ) -> ~[~[T]] {
-        Map_Discrim{
-            key : split_u16,
-            discrim : Pair_Discrim(U8_Discrim,U8_Discrim)
-        }.discrim(pairs)
+macro_rules! make_uint_split {
+    ($name:ident,$big:ident,$lil:ident,$factor:expr) => {
+        fn $name( x : $big ) -> ($lil,$lil) {
+            let (a,b) = x.div_rem(&$factor);
+            (a as $lil, b as $lil)
+        }
     }
-
 }
+
+macro_rules! make_uint_discrim {
+    ($name:ident,$big:ident,$split:ident,$help:ident) => {
+        impl<T> Discrim<$big,T> for $name {
+            fn discrim( &self, pairs : ~[($big,T)] ) -> ~[~[T]] {
+                Map_Discrim{
+                    key : $split,
+                    discrim : Pair_Discrim($help,$help)
+                }.discrim(pairs)
+            }
+        }
+    }
+}
+
+struct U16_Discrim;
+
+make_uint_split!(split_u16,u16,u8,256u16)
+make_uint_discrim!(U16_Discrim,u16,split_u16,U8_Discrim)
 
 fn main () {
     let input = ~[257u16, 1u16, 0u16, 256u16];
