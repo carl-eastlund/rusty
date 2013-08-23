@@ -191,7 +191,9 @@ Discrim<~[K],V> for Vector_Discrim<D> {
                 let (less,more) = do vec_partition_move(group) |&(ref ks,_)| {
                     ks.len() <= i
                 };
-                done.push( vec_map_move( less, |(_,v)| v ) );
+                if ( less.len() > 0 ) {
+                    done.push( vec_map_move( less, |(_,v)| v ) );
+                }
                 let split = do vec_map_move(more) |(ks,v)| {
                     (ks[i].clone(),(ks,v))
                 };
