@@ -71,25 +71,6 @@ impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
 
 }
 
-struct U8_Discrim;
-
-impl<T> Discrim<u8,T> for U8_Discrim {
-
-    fn discrim( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
-        let mut buckets = do vec::build_sized(256) |push| {
-            for _ in range(0,256) {
-                push(~[]);
-            }
-        };
-        for (k,v) in pairs.move_iter() {
-            buckets[k].push(v);
-        }
-        do buckets.retain |bucket| { bucket.len() > 0 };
-        buckets
-    }
-
-}
-
 macro_rules! make_uint_split {
     ($name:ident,$big:ident,$lil:ident,$factor:expr) => {
         fn $name( x : $big ) -> ($lil,$lil) {
@@ -112,14 +93,39 @@ macro_rules! make_uint_discrim {
     }
 }
 
+struct U8_Discrim;
 struct U16_Discrim;
+struct U32_Discrim;
+struct U64_Discrim;
 
-make_uint_split!(split_u16,u16,u8,256u16)
+make_uint_split!(split_u16,u16,u8,(1u16 << 8))
+make_uint_split!(split_u32,u32,u16,(1u32 << 16))
+make_uint_split!(split_u64,u64,u32,(1u64 << 32))
+
 make_uint_discrim!(U16_Discrim,u16,split_u16,U8_Discrim)
+make_uint_discrim!(U32_Discrim,u32,split_u32,U16_Discrim)
+make_uint_discrim!(U64_Discrim,u64,split_u64,U32_Discrim)
+
+impl<T> Discrim<u8,T> for U8_Discrim {
+
+    fn discrim( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
+        let mut buckets = do vec::build_sized(256) |push| {
+            for _ in range(0,256) {
+                push(~[]);
+            }
+        };
+        for (k,v) in pairs.move_iter() {
+            buckets[k].push(v);
+        }
+        do buckets.retain |bucket| { bucket.len() > 0 };
+        buckets
+    }
+
+}
 
 fn main () {
-    let input = ~[257u16, 1u16, 0u16, 256u16];
+    let input = ~[257u64, 65536u64, 1u64, 0u64, 65537u64, 256u64];
     println( input.to_str() );
-    let output = discrim_sort( U16_Discrim, input );
+    let output = discrim_sort( U64_Discrim, input );
     println( output.to_str() );
 }
