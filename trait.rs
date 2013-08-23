@@ -49,6 +49,9 @@ trait Disc<K,V> {
 }
 
 fn disc_sort<T:Clone,D:Disc<T,T>>( d : D, xs : &[T] ) -> ~[T] {
+    if( xs.len() == 0 ) {
+        return ~[]
+    }
     let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
     let groups = d.disc(pairs);
     vec_collapse_move( groups )
@@ -182,29 +185,54 @@ impl<K,V,I:Iterator<K>,D:Disc<K,(I,V)>>
 Disc<I,V> for Iter_Disc<D> {
 
     fn disc( &self, pairs : ~[(I,V)] ) -> ~[~[V]] {
-        let mut done = ~[];
-        let mut todo = ~[pairs];
-        while( todo.len() > 0 ) {
-            let mut new_todo = ~[];
-            for group in todo.move_iter() {
-                let mut done_group = ~[];
-                let mut work_group = ~[];
-                for (i0,v) in group.move_iter() {
-                    let mut i = i0;
-                    match i.next() {
-                        None => { done_group.push(v) }
-                        Some(e) => { work_group.push( (e,(i,v)) ) }
-                    }
+
+        let mut sorted = ~[];
+        let mut todo_stack = ~[pairs];
+        while( todo_stack.len() > 0 ) {
+            let todo_iters = todo_stack.pop();
+            let mut done = ~[];
+            let mut todo_elems = ~[];
+            for (k,v) in todo_iters.move_iter() {
+                let mut i = k;
+                match i.next() {
+                    None => { done.push(v) }
+                    Some(e) => { todo_elems.push( (e,(i,v)) ) }
                 }
-                if( done_group.len() > 0 ) {
-                    done.push(done_group);
-                }
-                let todo_groups = self.elem.disc(work_group);
-                new_todo.push_all_move( todo_groups );
             }
-            todo = new_todo;
+            if( done.len() > 0 ) {
+                sorted.push( done );
+            }
+            let todo_groups = self.elem.disc( todo_elems );
+            for todo_group in todo_groups.move_rev_iter() {
+                todo_stack.push(todo_group);
+            }
         }
-        done
+        sorted
+
+        // let mut done = ~[];
+        // let mut todo = ~[pairs];
+        // while( todo.len() > 0 ) {
+        //     let mut new_todo = ~[];
+        //     for group in todo.move_iter() {
+        //         let mut done_group = ~[];
+        //         let mut work_group = ~[];
+        //         for (i0,v) in group.move_iter() {
+        //             let mut i = i0;
+        //             match i.next() {
+        //                 None => { done_group.push(v) }
+        //                 Some(e) => { work_group.push( (e,(i,v)) ) }
+        //             }
+        //         }
+        //         if( done_group.len() > 0 ) {
+        //             done.push(done_group);
+        //         }
+        //         let todo_groups = self.elem.disc(work_group);
+        //         new_todo.push_all_move( todo_groups );
+        //     }
+        //     todo = new_todo;
+        // }
+        // done
+
     }
     
 }
@@ -271,11 +299,11 @@ impl<'self,V> Disc<&'self str,V> for Str_Disc {
 }
 
 fn main () {
-    let strs = &[&"cat",&"bat",&"catch",&"batch",&"botch",&"car"];
+    let strs = &[&"batty",&"cat",&"bat",&"catch",&"batch",&"botch",&"car"];
     println( strs.to_str() );
     let sorted_strs = disc_sort( Str_Disc, strs );
     println( sorted_strs.to_str() );
-    let vecs = &[&[2],&[1],&[2,1],&[1,2],&[3,0],&[3]];
+    let vecs = &[&[2],&[1],&[2,1],&[1,2],&[1,0],&[3]];
     println( vecs.to_str() );
     let sorted_vecs = disc_sort( Vec_Disc{ elem: Int_Disc }, vecs );
     println( sorted_vecs.to_str() );
