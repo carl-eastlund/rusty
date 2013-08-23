@@ -1,5 +1,9 @@
 
 use std::vec;
+use std::i8;
+use std::i16;
+use std::i32;
+use std::i64;
 
 fn vector_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
@@ -81,12 +85,25 @@ macro_rules! make_uint_split {
 }
 
 macro_rules! make_uint_discrim {
-    ($name:ident,$big:ident,$split:ident,$help:ident) => {
+    ($name:ident,$big:ident,$help:ident,$lil:ident,$factor:expr) => {
         impl<T> Discrim<$big,T> for $name {
             fn discrim( &self, pairs : ~[($big,T)] ) -> ~[~[T]] {
                 Map_Discrim{
-                    key : $split,
-                    discrim : Pair_Discrim($help,$help)
+                    key: |x:$big| ((x/$factor) as $lil, (x%$factor) as $lil),
+                    discrim: Pair_Discrim($help,$help)
+                }.discrim(pairs)
+            }
+        }
+    }
+}
+
+macro_rules! make_int_discrim {
+    ($name:ident,$i:ident,$help:ident,$u:ident) => {
+        impl<T> Discrim<$i,T> for $name {
+            fn discrim( &self, pairs : ~[($i,T)] ) -> ~[~[T]] {
+                Map_Discrim{
+                    key: |x:$i| (x - $i::min_value) as $u,
+                    discrim: $help
                 }.discrim(pairs)
             }
         }
@@ -98,13 +115,19 @@ struct U16_Discrim;
 struct U32_Discrim;
 struct U64_Discrim;
 
-make_uint_split!(split_u16,u16,u8,(1u16 << 8))
-make_uint_split!(split_u32,u32,u16,(1u32 << 16))
-make_uint_split!(split_u64,u64,u32,(1u64 << 32))
+struct I8_Discrim;
+struct I16_Discrim;
+struct I32_Discrim;
+struct I64_Discrim;
 
-make_uint_discrim!(U16_Discrim,u16,split_u16,U8_Discrim)
-make_uint_discrim!(U32_Discrim,u32,split_u32,U16_Discrim)
-make_uint_discrim!(U64_Discrim,u64,split_u64,U32_Discrim)
+make_uint_discrim!(U16_Discrim,u16,U8_Discrim,u8,1u16<<8)
+make_uint_discrim!(U32_Discrim,u32,U16_Discrim,u16,1u32<<16)
+make_uint_discrim!(U64_Discrim,u64,U32_Discrim,u32,1u64<<32)
+
+make_int_discrim!(I8_Discrim,i8,U8_Discrim,u8)
+make_int_discrim!(I16_Discrim,i16,U16_Discrim,u16)
+make_int_discrim!(I32_Discrim,i32,U32_Discrim,u32)
+make_int_discrim!(I64_Discrim,i64,U64_Discrim,u64)
 
 impl<T> Discrim<u8,T> for U8_Discrim {
 
@@ -124,8 +147,8 @@ impl<T> Discrim<u8,T> for U8_Discrim {
 }
 
 fn main () {
-    let input = ~[257u64, 65536u64, 1u64, 0u64, 65537u64, 256u64];
+    let input = ~[-257i64, -65536i64, -1i64, -0i64, -65537i64, -256i64];
     println( input.to_str() );
-    let output = discrim_sort( U64_Discrim, input );
+    let output = discrim_sort( I64_Discrim, input );
     println( output.to_str() );
 }
