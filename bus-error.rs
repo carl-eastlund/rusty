@@ -1,52 +1,38 @@
 
-trait Discrim {
+trait Trait {
 
-    fn discrim( &self );
-
-}
-
-struct Unit_Discrim;
-
-impl Discrim for Unit_Discrim {
-
-    fn discrim( &self ) {}
+    fn method( &self );
 
 }
 
-struct Iterator_Discrim<D>{ elem: D }
+struct Simple;
 
-impl<D:Discrim> Discrim for Iterator_Discrim<D> {
+impl Trait for Simple {
 
-    fn discrim( &self ) {
-        self.elem.discrim();
+    fn method( &self ) {}
+
+}
+
+impl<'self,D> Trait for &'self D {
+
+    fn method( &self ) {
+        self.method()
+    }
+
+}
+
+struct Nested<D>{ elem: D }
+
+impl<D:Trait> Trait for Nested<D> {
+
+    fn method( &self ) {
+        self.elem.method();
     }
     
 }
 
-impl<'self,D> Discrim for &'self D {
-
-    fn discrim( &self ) {
-        self.discrim()
-    }
-
-}
-
-struct Vector_Discrim<D>{ elem: D }
-
-impl<D:Discrim> Discrim for Vector_Discrim<D> {
-
-    fn discrim( &self ) {
-        Iterator_Discrim{
-            elem: &self.elem
-        }.discrim()
-    }
-
-}
-
 fn main () {
     println("start");
-    let u = Unit_Discrim;
-    let v = Vector_Discrim{ elem: u };
-    v.discrim();
+    Nested{ elem: &Simple }.method();
     println("finish");
 }
