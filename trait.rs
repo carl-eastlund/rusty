@@ -275,6 +275,7 @@ Disc<&'self[K],V> for Vec_Disc<D> {
 
 struct Char_Disc;
 struct Str_Disc;
+struct Owned_Str_Disc;
 
 impl<T> Disc<char,T> for Char_Disc {
 
@@ -294,6 +295,55 @@ impl<'self,V> Disc<&'self str,V> for Str_Disc {
         let str_iter = |s:&str| s.iter();
         let map_disc = Map_Disc{ key: str_iter, disc: iter_disc };
         map_disc.disc( pairs )
+    }
+
+}
+
+impl<V> Disc<~str,V> for Owned_Str_Disc {
+
+    fn disc( &self, pairs : ~[(~str,V)] ) -> ~[~[V]] {
+        let mut strs = ~[];
+        let mut vals = ~[];
+        for (k,v) in pairs.move_iter() {
+            strs.push(k);
+            vals.push(v);
+        }
+        let mut slices = ~[];
+        for (k,v) in strs.iter().zip(vals.move_iter()) {
+            slices.push( (k.as_slice(), v) );
+        }
+        Str_Disc.disc( slices )
+    }
+
+}
+
+#[deriving (ToStr)]
+enum Tree {
+    Number(int),
+    String(~str),
+    Node(~[Tree])
+}
+
+struct TreeDisc;
+
+impl<T> Disc<Tree,T> for TreeDisc {
+
+    fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
+        let mut nums = ~[];
+        let mut strs = ~[];
+        let mut nodes = ~[];
+        for (k,v) in pairs.move_iter() {
+            match k {
+                Number(i) => { nums.push( (i,v) ) }
+                String(s) => { strs.push( (s,v) ) }
+                Node(vec) => { nodes.push( (vec,v) ) }
+            }
+        }
+        let mut sorted = ~[];
+        sorted.push_all_move( Int_Disc.disc( nums ) );
+        sorted.push_all_move( Owned_Str_Disc.disc( strs ) );
+        sorted.push_all_move( Owned_Vec_Disc{ elem: TreeDisc }.disc( nodes ) );
+        sorted
     }
 
 }
