@@ -176,6 +176,39 @@ make_int_discrim!(I64_Discrim,i64,U64_Discrim,u64)
 make_cast_discrim!(Int_Discrim,int,I64_Discrim,i64)
 make_cast_discrim!(UInt_Discrim,uint,U64_Discrim,u64)
 
+struct Iterator_Discrim<D>{ elem: D }
+
+impl<K,V,I:Iterator<K>,D:Discrim<K,(I,V)>>
+Discrim<I,V> for Iterator_Discrim<D> {
+
+    fn discrim( &self, pairs : ~[(I,V)] ) -> ~[~[V]] {
+        let mut done = ~[];
+        let mut todo = ~[pairs];
+        while( todo.len() > 0 ) {
+            let mut new_todo = ~[];
+            for group in todo.move_iter() {
+                let mut done_group = ~[];
+                let mut work_group = ~[];
+                for (i0,v) in group.move_iter() {
+                    let mut i = i0;
+                    match i.next() {
+                        None => { done_group.push(v) }
+                        Some(e) => { work_group.push( (e,(i,v)) ) }
+                    }
+                }
+                if( done.len() > 0 ) {
+                    done.push(done_group);
+                }
+                let todo_groups = self.elem.discrim(work_group);
+                new_todo.push_all_move( todo_groups );
+            }
+            todo = new_todo;
+        }
+        done
+    }
+    
+}
+
 struct Vector_Discrim<D>{ elem: D }
 
 impl<K:Clone,V,D:Discrim<K,(~[K],V)>>
@@ -208,9 +241,9 @@ Discrim<~[K],V> for Vector_Discrim<D> {
 }
 
 fn main () {
-    let input = ~[~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]]];
+    let input = ~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]];
     println( input.to_str() );
-    let output = discrim_sort( Vector_Discrim{ elem: Vector_Discrim{ elem: Int_Discrim } }, input );
+    let output = discrim_sort( Vector_Discrim{ elem: Int_Discrim }, input );
     println( input.to_str() );
     println( output.to_str() );
 }
