@@ -31,12 +31,6 @@ trait Discrim<K,V> {
 
 }
 
-fn discrim_sort<T:Clone,D:Discrim<T,T>>( d : D, xs : &[T] ) -> ~[T] {
-    let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
-    let groups = d.discrim(pairs);
-    vec_collapse_move( groups )
-}
-
 struct Map_Discrim<'self,A,B,D>{ key : &'self fn(A)->B, discrim : D }
 
 impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
@@ -105,17 +99,17 @@ impl<K:Clone,V,D:Discrim<K,(vec::MoveIterator<K>,V)>>
 Discrim<~[K],V> for Vector_Discrim<D> {
 
     fn discrim( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
-        let iter_disc = Iterator_Discrim{ elem: &self.elem };
-        let vec_iter = |v:~[K]| v.move_iter();
-        let vec_disc = Map_Discrim{ key: vec_iter, discrim: iter_disc };
-        vec_disc.discrim(pairs)
+        Map_Discrim{
+            key: |v:~[K]| v.move_iter(),
+            discrim: Iterator_Discrim{ elem: &self.elem }
+        }.discrim(pairs)
     }
 
 }
 
 fn main () {
-    let input = ~[];
     println("start");
-    discrim_sort( Vector_Discrim{ elem: Unit_Discrim }, input );
+    let input : ~[(~[()],())] = ~[];
+    Vector_Discrim{ elem: Unit_Discrim }.discrim(input);
     println("finish");
 }
