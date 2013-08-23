@@ -2,7 +2,19 @@
 use std::vec;
 
 fn vector_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
-    xs.iter().map(f).to_owned_vec()
+    let mut ys = vec::with_capacity(xs.len());
+    for x in xs.iter() {
+        ys.push(f(x));
+    }
+    ys
+}
+
+fn vector_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
+    let mut ys = vec::with_capacity(xs.len());
+    for x in xs.move_iter() {
+        ys.push(f(x));
+    }
+    ys
 }
 
 fn vector_collapse_sized<T>( xss : ~[~[T]], n : uint ) -> ~[T] {
@@ -15,7 +27,7 @@ fn vector_collapse_sized<T>( xss : ~[~[T]], n : uint ) -> ~[T] {
 
 trait Discrim<K,V> {
 
-    fn discrim( self, ~[(K,V)] ) -> ~[~[V]];
+    fn discrim( &self, ~[(K,V)] ) -> ~[~[V]];
 
 }
 
@@ -25,9 +37,53 @@ fn discrim_sort<T:Clone,D:Discrim<T,T>>( d : D, xs : &[T] ) -> ~[T] {
     vector_collapse_sized( groups, xs.len() )
 }
 
-impl<T> Discrim<u8,T> for () {
+struct Pair_Discrim<A,B>(A,B);
 
-    fn discrim( self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
+impl<K1,K2,V,D1:Discrim<K1,(K2,V)>,D2:Discrim<K2,V>>
+Discrim<(K1,K2),V> for Pair_Discrim<D1,D2> {
+
+    fn discrim( &self, pairs : ~[((K1,K2),V)] ) -> ~[~[V]] {
+        match self {
+            &Pair_Discrim(ref first, ref second) => {
+                let n = pairs.len();
+                let nested = do vector_map_move(pairs) |((k1,k2),v)| {
+                    (k1,(k2,v))
+                };
+                let pass1 = first.discrim(nested);
+                let pass2 = do vector_map_move(pass1) |group| {
+                    second.discrim(group)
+                };
+                vector_collapse_sized( pass2, n )
+            }
+        }
+    }
+
+}
+
+struct Map_Discrim<'self,A,B,D>{ key : &'self fn(A)->B, discrim : D }
+
+impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
+
+    fn discrim( &self, pairs : ~[(A,V)] ) -> ~[~[V]] {
+        let mapped = do vector_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
+        self.discrim.discrim(mapped)
+    }
+
+}
+
+struct U8_Discrim;
+struct U16_Discrim;
+struct U32_Discrim;
+struct U64_Discrim;
+
+fn split_u16( x:u16 ) -> (u8,u8) {
+    let (a,b) = x.div_rem(&256u16);
+    (a as u8, b as u8)
+}
+
+impl<T> Discrim<u8,T> for U8_Discrim {
+
+    fn discrim( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
         let mut buckets = do vec::build_sized(256) |push| {
             for _ in range(0,256) {
                 push(~[]);
@@ -42,9 +98,20 @@ impl<T> Discrim<u8,T> for () {
 
 }
 
+impl<T> Discrim<u16,T> for U16_Discrim {
+
+    fn discrim( &self, pairs : ~[(u16,T)] ) -> ~[~[T]] {
+        Map_Discrim{
+            key : split_u16,
+            discrim : Pair_Discrim(U8_Discrim,U8_Discrim)
+        }.discrim(pairs)
+    }
+
+}
+
 fn main () {
-    let input = ~[3u8, 1u8, 4u8, 1u8, 5u8];
+    let input = ~[257u16, 1u16, 0u16, 256u16];
     println( input.to_str() );
-    let output = discrim_sort( (), input );
+    let output = discrim_sort( U16_Discrim, input );
     println( output.to_str() );
 }
