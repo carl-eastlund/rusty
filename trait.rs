@@ -209,41 +209,60 @@ Discrim<I,V> for Iterator_Discrim<D> {
     
 }
 
-struct Vector_Discrim<D>{ elem: D }
+impl<'self,K,V,D:Discrim<K,V>> Discrim<K,V> for &'self D {
 
-impl<K:Clone,V,D:Discrim<K,(~[K],V)>>
-Discrim<~[K],V> for Vector_Discrim<D> {
-
-    fn discrim( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
-        let mut i = 0;
-        let mut done = ~[];
-        let mut todo = ~[pairs];
-        while( todo.len() > 0 ) {
-            let mut new_groups = ~[];
-            for group in todo.move_iter() {
-                let (less,more) = do vec_partition_move(group) |&(ref ks,_)| {
-                    ks.len() <= i
-                };
-                if ( less.len() > 0 ) {
-                    done.push( vec_map_move( less, |(_,v)| v ) );
-                }
-                let split = do vec_map_move(more) |(ks,v)| {
-                    (ks[i].clone(),(ks,v))
-                };
-                new_groups.push_all_move(self.elem.discrim(split));
-                }
-            todo = new_groups;
-            i = i+1;
-            }
-        done
+    fn discrim( &self, pairs : ~[(K,V)] ) -> ~[~[V]] {
+        self.discrim(pairs)
     }
 
 }
 
+struct Vector_Discrim<D>{ elem: D }
+
+impl<K:Clone,V,D:Discrim<K,(vec::MoveIterator<K>,V)>>
+Discrim<~[K],V> for Vector_Discrim<D> {
+
+    fn discrim( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
+        let iter_disc = Iterator_Discrim{ elem: &self.elem };
+        let vec_iter = |v:~[K]| v.move_iter();
+        let vec_disc = Map_Discrim{ key: vec_iter, discrim: iter_disc };
+        vec_disc.discrim(pairs)
+    }
+
+        // let mut i = 0;
+        // let mut done = ~[];
+        // let mut todo = ~[pairs];
+        // while( todo.len() > 0 ) {
+        //     let mut new_groups = ~[];
+        //     for group in todo.move_iter() {
+        //         let (less,more) = do vec_partition_move(group) |&(ref ks,_)| {
+        //             ks.len() <= i
+        //         };
+        //         if ( less.len() > 0 ) {
+        //             done.push( vec_map_move( less, |(_,v)| v ) );
+        //         }
+        //         let split = do vec_map_move(more) |(ks,v)| {
+        //             (ks[i].clone(),(ks,v))
+        //         };
+        //         new_groups.push_all_move(self.elem.discrim(split));
+        //         }
+        //     todo = new_groups;
+        //     i = i+1;
+        //     }
+        // done
+
+}
+
 fn main () {
+    println( "one" );
     let input = ~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]];
+    println( "two" );
     println( input.to_str() );
+    println( "three" );
     let output = discrim_sort( Vector_Discrim{ elem: Int_Discrim }, input );
+    println( "four" );
     println( input.to_str() );
+    println( "five" );
     println( output.to_str() );
+    println( "six" );
 }
