@@ -219,7 +219,7 @@ impl<'self,K,V,D:Disc<K,V>> Disc<K,V> for &'self D {
 
 struct Owned_Vec_Disc<D>{ elem: D }
 
-impl<K:Clone,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
+impl<K,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
 Disc<~[K],V> for Owned_Vec_Disc<D> {
 
     fn disc( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
