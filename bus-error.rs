@@ -31,17 +31,6 @@ trait Discrim<K,V> {
 
 }
 
-struct Map_Discrim<'self,A,B,D>{ key : &'self fn(A)->B, discrim : D }
-
-impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
-
-    fn discrim( &self, pairs : ~[(A,V)] ) -> ~[~[V]] {
-        let mapped = do vec_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
-        self.discrim.discrim(mapped)
-    }
-
-}
-
 struct Unit_Discrim;
 
 impl<T> Discrim<(),T> for Unit_Discrim {
@@ -99,10 +88,9 @@ impl<K:Clone,V,D:Discrim<K,(vec::MoveIterator<K>,V)>>
 Discrim<~[K],V> for Vector_Discrim<D> {
 
     fn discrim( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
-        Map_Discrim{
-            key: |v:~[K]| v.move_iter(),
-            discrim: Iterator_Discrim{ elem: &self.elem }
-        }.discrim(pairs)
+        Iterator_Discrim{
+            elem: &self.elem
+        }.discrim( do vec_map_move(pairs) |(k,v)| { (k.move_iter(),v) } )
     }
 
 }
