@@ -5,7 +5,7 @@ use std::i16;
 use std::i32;
 use std::i64;
 
-fn vector_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
+fn vec_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
     for x in xs.iter() {
         ys.push(f(x));
@@ -13,7 +13,7 @@ fn vector_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
     ys
 }
 
-fn vector_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
+fn vec_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
     for x in xs.move_iter() {
         ys.push(f(x));
@@ -21,12 +21,25 @@ fn vector_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
     ys
 }
 
-fn vector_collapse_sized<T>( xss : ~[~[T]], n : uint ) -> ~[T] {
-    let mut combined = vec::with_capacity(n);
+fn vec_collapse_move<T>( xss : ~[~[T]] ) -> ~[T] {
+    let mut combined = ~[];
     for xs in xss.move_iter() {
         combined.push_all_move(xs);
     }
     combined
+}
+
+fn vec_partition_move<T>( xs : ~[T], f : &fn(&T)->bool ) -> (~[T],~[T]) {
+    let mut pass = ~[];
+    let mut fail = ~[];
+    for x in xs.move_iter() {
+        if f(&x) {
+            pass.push(x);
+        } else {
+            fail.push(x);
+        }
+    }
+    (pass,fail)
 }
 
 trait Discrim<K,V> {
@@ -36,9 +49,9 @@ trait Discrim<K,V> {
 }
 
 fn discrim_sort<T:Clone,D:Discrim<T,T>>( d : D, xs : &[T] ) -> ~[T] {
-    let pairs = do vector_map(xs) |x| { ((*x).clone(), (*x).clone()) };
+    let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
     let groups = d.discrim(pairs);
-    vector_collapse_sized( groups, xs.len() )
+    vec_collapse_move( groups )
 }
 
 struct Pair_Discrim<A,B>(A,B);
@@ -49,15 +62,14 @@ Discrim<(K1,K2),V> for Pair_Discrim<D1,D2> {
     fn discrim( &self, pairs : ~[((K1,K2),V)] ) -> ~[~[V]] {
         match self {
             &Pair_Discrim(ref first, ref second) => {
-                let n = pairs.len();
-                let nested = do vector_map_move(pairs) |((k1,k2),v)| {
+                let nested = do vec_map_move(pairs) |((k1,k2),v)| {
                     (k1,(k2,v))
                 };
                 let pass1 = first.discrim(nested);
-                let pass2 = do vector_map_move(pass1) |group| {
+                let pass2 = do vec_map_move(pass1) |group| {
                     second.discrim(group)
                 };
-                vector_collapse_sized( pass2, n )
+                vec_collapse_move( pass2 )
             }
         }
     }
@@ -69,7 +81,7 @@ struct Map_Discrim<'self,A,B,D>{ key : &'self fn(A)->B, discrim : D }
 impl<'self,A,B,V,D:Discrim<B,V>> Discrim<A,V> for Map_Discrim<'self,A,B,D> {
 
     fn discrim( &self, pairs : ~[(A,V)] ) -> ~[~[V]] {
-        let mapped = do vector_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
+        let mapped = do vec_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
         self.discrim.discrim(mapped)
     }
 
@@ -164,9 +176,39 @@ make_int_discrim!(I64_Discrim,i64,U64_Discrim,u64)
 make_cast_discrim!(Int_Discrim,int,I64_Discrim,i64)
 make_cast_discrim!(UInt_Discrim,uint,U64_Discrim,u64)
 
+struct Vector_Discrim<D>{ elem: D }
+
+impl<K:Clone,V,D:Discrim<K,(~[K],V)>>
+Discrim<~[K],V> for Vector_Discrim<D> {
+
+    fn discrim( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
+        let mut i = 0;
+        let mut done = ~[];
+        let mut todo = ~[pairs];
+        while( todo.len() > 0 ) {
+            let mut new_groups = ~[];
+            for group in todo.move_iter() {
+                let (less,more) = do vec_partition_move(group) |&(ref ks,_)| {
+                    ks.len() <= i
+                };
+                done.push( vec_map_move( less, |(_,v)| v ) );
+                let split = do vec_map_move(more) |(ks,v)| {
+                    (ks[i].clone(),(ks,v))
+                };
+                new_groups.push_all_move(self.elem.discrim(split));
+                }
+            todo = new_groups;
+            i = i+1;
+            }
+        done
+    }
+
+}
+
 fn main () {
-    let input = ~[-257, -65536, -1, -0, -65537, -256];
+    let input = ~[~[3,1,4], ~[], ~[3,1,4,1,5], ~[1,2,3]];
     println( input.to_str() );
-    let output = discrim_sort( Int_Discrim, input );
+    let output = discrim_sort( Vector_Discrim{ elem: Int_Discrim }, input );
+    println( input.to_str() );
     println( output.to_str() );
 }
