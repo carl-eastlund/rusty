@@ -85,32 +85,8 @@ Disc<I,V> for IterDisc<D> {
     
 }
 
-impl<'self,K,V,D:Disc<K,V>> Disc<K,V> for &'self D {
-
-    fn disc( &self, pairs : ~[(K,V)] ) -> ~[~[V]] {
-        (**self).disc(pairs)
-    }
-
-}
-
-struct OwnedVecDisc<D>{ elem: D }
-
-impl<K,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
-Disc<~[K],V> for OwnedVecDisc<D> {
-
-    fn disc( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
-        let iter_disc = IterDisc{ elem: &self.elem };
-        let vec_iter = |v:~[K]| v.move_iter();
-        let vec_disc = MapDisc{ key: vec_iter, disc: iter_disc };
-        vec_disc.disc(pairs)
-    }
-
-}
-
 #[deriving (Clone,ToStr)]
-enum Tree {
-    Node(~[Tree])
-}
+enum Tree { Node(~[Tree]) }
 
 struct TreeDisc;
 
@@ -118,7 +94,10 @@ impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
         let nodes = do vec_map_move(pairs) |(Node(vec),v)| { (vec,v) };
-        OwnedVecDisc{ elem: TreeDisc }.disc(nodes)
+        let iter_disc = IterDisc{ elem: TreeDisc };
+        let vec_iter = |v:~[Tree]| v.move_iter();
+        let vec_disc = MapDisc{ key: vec_iter, disc: iter_disc };
+        vec_disc.disc(nodes)
     }
 
 }
