@@ -96,54 +96,6 @@ impl<'self,A,B,V,D:Disc<B,V>> Disc<A,V> for MapDisc<'self,A,B,D> {
 
 }
 
-macro_rules! make_uint_split {
-    ($name:ident,$big:ident,$lil:ident,$factor:expr) => {
-        fn $name( x : $big ) -> ($lil,$lil) {
-            let (a,b) = x.div_rem(&$factor);
-            (a as $lil, b as $lil)
-        }
-    }
-}
-
-macro_rules! make_uint_disc {
-    ($name:ident,$big:ident,$help:ident,$lil:ident,$factor:expr) => {
-        impl<T> Disc<$big,T> for $name {
-            fn disc( &self, pairs : ~[($big,T)] ) -> ~[~[T]] {
-                MapDisc{
-                    key: |x:$big| ((x/$factor) as $lil, (x%$factor) as $lil),
-                    disc: PairDisc($help,$help)
-                }.disc(pairs)
-            }
-        }
-    }
-}
-
-macro_rules! make_int_disc {
-    ($name:ident,$i:ident,$help:ident,$u:ident) => {
-        impl<T> Disc<$i,T> for $name {
-            fn disc( &self, pairs : ~[($i,T)] ) -> ~[~[T]] {
-                MapDisc{
-                    key: |x:$i| (x - $i::min_value) as $u,
-                    disc: $help
-                }.disc(pairs)
-            }
-        }
-    }
-}
-
-macro_rules! make_cast_disc {
-    ($name:ident,$from:ident,$help:ident,$to:ident) => {
-        impl<T> Disc<$from,T> for $name {
-            fn disc( &self, pairs : ~[($from,T)] ) -> ~[~[T]] {
-                MapDisc{
-                    key: |x:$from| x as $to,
-                    disc: $help
-                }.disc(pairs)
-            }
-        }
-    }
-}
-
 struct IterDisc<D>{ elem: D }
 
 impl<K,V,I:Iterator<K>,D:Disc<K,(I,V)>>
@@ -202,7 +154,6 @@ Disc<~[K],V> for OwnedVecDisc<D> {
 
 #[deriving (Clone,ToStr)]
 enum Tree {
-    Unit,
     Node(~[Tree])
 }
 
@@ -211,33 +162,15 @@ struct TreeDisc;
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let mut units = ~[];
-        let mut nodes = ~[];
-        for (k,v) in pairs.move_iter() {
-            match k {
-                Unit => { units.push( ((),v) ) }
-                Node(vec) => { nodes.push( (vec,v) ) }
-            }
-        }
-        let mut sorted = ~[];
-        sorted.push_all_move( UnitDisc.disc( units ) );
-        sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc( nodes ) );
-        sorted
+        let nodes = do vec_map_move(pairs) |(Node(vec),v)| { (vec,v) };
+        OwnedVecDisc{ elem: TreeDisc }.disc(nodes)
     }
 
 }
 
-fn u() -> Tree { Unit }
-fn n( n : ~[Tree] ) -> Tree { Node(n) }
-
 fn main () {
-    let input =
-        ~[n(~[u(), u()]),
-          u(),
-          n(~[u(), u(), u()]),
-          u(),
-          n(~[u()])];
+    let input : ~[Tree] = ~[];
     println( input.to_str() );
-    let output = disc_sort( TreeDisc, input );
-    println( output.to_str() );
+    // let output = disc_sort( TreeDisc, input );
+    // println( output.to_str() );
 }

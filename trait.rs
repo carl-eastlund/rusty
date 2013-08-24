@@ -340,9 +340,15 @@ impl<T> Disc<Tree,T> for TreeDisc {
             }
         }
         let mut sorted = ~[];
-        sorted.push_all_move( IntDisc.disc( ints ) );
-        sorted.push_all_move( OwnedStrDisc.disc( strs ) );
-        sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc( nodes ) );
+        if( ints.len() > 0 ) {
+            sorted.push_all_move( IntDisc.disc(ints) );
+        }
+        if( strs.len() > 0 ) {
+            sorted.push_all_move( OwnedStrDisc.disc(strs) );
+        }
+        if( nodes.len() > 0 ) {
+            sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc(nodes) );
+        }
         sorted
     }
 
