@@ -25,19 +25,6 @@ fn vec_collapse_move<T>( xss : ~[~[T]] ) -> ~[T] {
     combined
 }
 
-fn vec_partition_move<T>( xs : ~[T], f : &fn(&T)->bool ) -> (~[T],~[T]) {
-    let mut pass = ~[];
-    let mut fail = ~[];
-    for x in xs.move_iter() {
-        if f(&x) {
-            pass.push(x);
-        } else {
-            fail.push(x);
-        }
-    }
-    (pass,fail)
-}
-
 trait Disc<K,V> {
 
     fn disc( &self, ~[(K,V)] ) -> ~[~[V]];
@@ -51,38 +38,6 @@ fn disc_sort<T:Clone,D:Disc<T,T>>( d : D, xs : &[T] ) -> ~[T] {
     let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
     let groups = d.disc(pairs);
     vec_collapse_move( groups )
-}
-
-struct UnitDisc;
-
-impl<T> Disc<(),T> for UnitDisc {
-
-    fn disc( &self, pairs : ~[((),T)] ) -> ~[~[T]] {
-        ~[ vec_map_move( pairs, |(_,x)| x ) ]
-    }
-
-}
-
-struct PairDisc<A,B>(A,B);
-
-impl<K1,K2,V,D1:Disc<K1,(K2,V)>,D2:Disc<K2,V>>
-Disc<(K1,K2),V> for PairDisc<D1,D2> {
-
-    fn disc( &self, pairs : ~[((K1,K2),V)] ) -> ~[~[V]] {
-        match self {
-            &PairDisc(ref first, ref second) => {
-                let nested = do vec_map_move(pairs) |((k1,k2),v)| {
-                    (k1,(k2,v))
-                };
-                let pass1 = first.disc(nested);
-                let pass2 = do vec_map_move(pass1) |group| {
-                    second.disc(group)
-                };
-                vec_collapse_move( pass2 )
-            }
-        }
-    }
-
 }
 
 struct MapDisc<'self,A,B,D>{ key : &'self fn(A)->B, disc : D }
@@ -171,6 +126,6 @@ impl<T> Disc<Tree,T> for TreeDisc {
 fn main () {
     let input : ~[Tree] = ~[];
     println( input.to_str() );
-    // let output = disc_sort( TreeDisc, input );
-    // println( output.to_str() );
+    let output = disc_sort( TreeDisc, input );
+    println( output.to_str() );
 }
