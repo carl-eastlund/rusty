@@ -1,21 +1,17 @@
 
-use std::vec;
+enum Tree { Node(~[Tree]) }
 
-trait Disc<K,V> {
+struct TreeDisc;
 
-    fn disc( &self, ~[(K,V)] ) -> ~[~[V]];
+impl<T> TreeDisc {
 
-}
-
-struct IterDisc<D>{ elem: D }
-
-impl<K,V,I:Iterator<K>,D:Disc<K,(I,V)>>
-Disc<I,V> for IterDisc<D> {
-
-    fn disc( &self, pairs : ~[(I,V)] ) -> ~[~[V]] {
-
+    fn disc( &self, pairs : ~[(Tree,T)] ) {
+        let mut ys = ~[];
+        for (Node(k),v) in pairs.move_iter() {
+            ys.push( (k.move_iter(),v) );
+        }
         let mut sorted = ~[];
-        let mut todo_stack = ~[pairs];
+        let mut todo_stack = ~[ys];
         while( todo_stack.len() > 0 ) {
             let todo_iters = todo_stack.pop();
             let mut done = ~[];
@@ -30,37 +26,12 @@ Disc<I,V> for IterDisc<D> {
             if( done.len() > 0 ) {
                 sorted.push( done );
             }
-            let todo_groups = self.elem.disc( todo_elems );
-            for todo_group in todo_groups.move_rev_iter() {
-                todo_stack.push(todo_group);
-            }
+            TreeDisc.disc( todo_elems );
         }
-        sorted
-
-    }
-    
-}
-
-#[deriving (Clone,ToStr)]
-enum Tree { Node(~[Tree]) }
-
-struct TreeDisc;
-
-impl<T> Disc<Tree,T> for TreeDisc {
-
-    fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let mut ys = vec::with_capacity(pairs.len());
-        for (Node(k),v) in pairs.move_iter() {
-            ys.push( (k.move_iter(),v) );
-        }
-        IterDisc{ elem: TreeDisc }.disc(ys)
     }
 
 }
 
 fn main () {
-    let input : ~[(Tree,())] = ~[];
-    println( input.to_str() );
-    let output = TreeDisc.disc(input);
-    println( output.to_str() );
+    let input : ~[(Tree,())] = ~[]; TreeDisc.disc(input);
 }
