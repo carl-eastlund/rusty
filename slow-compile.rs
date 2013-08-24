@@ -1,14 +1,6 @@
 
 use std::vec;
 
-fn vec_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
-    let mut ys = vec::with_capacity(xs.len());
-    for x in xs.move_iter() {
-        ys.push(f(x));
-    }
-    ys
-}
-
 trait Disc<K,V> {
 
     fn disc( &self, ~[(K,V)] ) -> ~[~[V]];
@@ -57,8 +49,11 @@ struct TreeDisc;
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let mapped = do vec_map_move(pairs) |(Node(k),v)| { (k.move_iter(),v) };
-        IterDisc{ elem: TreeDisc }.disc(mapped)
+        let mut ys = vec::with_capacity(pairs.len());
+        for (Node(k),v) in pairs.move_iter() {
+            ys.push( (k.move_iter(),v) );
+        }
+        IterDisc{ elem: TreeDisc }.disc(ys)
     }
 
 }
