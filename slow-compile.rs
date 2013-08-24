@@ -1,14 +1,6 @@
 
 use std::vec;
 
-fn vec_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
-    let mut ys = vec::with_capacity(xs.len());
-    for x in xs.iter() {
-        ys.push(f(x));
-    }
-    ys
-}
-
 fn vec_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
     for x in xs.move_iter() {
@@ -17,37 +9,9 @@ fn vec_map_move<A,B>( xs : ~[A], f : &fn(A)->B ) -> ~[B] {
     ys
 }
 
-fn vec_collapse_move<T>( xss : ~[~[T]] ) -> ~[T] {
-    let mut combined = ~[];
-    for xs in xss.move_iter() {
-        combined.push_all_move(xs);
-    }
-    combined
-}
-
 trait Disc<K,V> {
 
     fn disc( &self, ~[(K,V)] ) -> ~[~[V]];
-
-}
-
-fn disc_sort<T:Clone,D:Disc<T,T>>( d : D, xs : &[T] ) -> ~[T] {
-    if( xs.len() == 0 ) {
-        return ~[]
-    }
-    let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
-    let groups = d.disc(pairs);
-    vec_collapse_move( groups )
-}
-
-struct MapDisc<'self,A,B,D>{ key : &'self fn(A)->B, disc : D }
-
-impl<'self,A,B,V,D:Disc<B,V>> Disc<A,V> for MapDisc<'self,A,B,D> {
-
-    fn disc( &self, pairs : ~[(A,V)] ) -> ~[~[V]] {
-        let mapped = do vec_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
-        self.disc.disc(mapped)
-    }
 
 }
 
@@ -93,18 +57,15 @@ struct TreeDisc;
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let nodes = do vec_map_move(pairs) |(Node(vec),v)| { (vec,v) };
-        let iter_disc = IterDisc{ elem: TreeDisc };
-        let vec_iter = |v:~[Tree]| v.move_iter();
-        let vec_disc = MapDisc{ key: vec_iter, disc: iter_disc };
-        vec_disc.disc(nodes)
+        let mapped = do vec_map_move(pairs) |(Node(k),v)| { (k.move_iter(),v) };
+        IterDisc{ elem: TreeDisc }.disc(mapped)
     }
 
 }
 
 fn main () {
-    let input : ~[Tree] = ~[];
+    let input : ~[(Tree,())] = ~[];
     println( input.to_str() );
-    let output = disc_sort( TreeDisc, input );
+    let output = TreeDisc.disc(input);
     println( output.to_str() );
 }
