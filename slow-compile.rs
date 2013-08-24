@@ -1,9 +1,5 @@
 
 use std::vec;
-use std::i8;
-use std::i16;
-use std::i32;
-use std::i64;
 
 fn vec_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
@@ -55,6 +51,16 @@ fn disc_sort<T:Clone,D:Disc<T,T>>( d : D, xs : &[T] ) -> ~[T] {
     let pairs = do vec_map(xs) |x| { ((*x).clone(), (*x).clone()) };
     let groups = d.disc(pairs);
     vec_collapse_move( groups )
+}
+
+struct UnitDisc;
+
+impl<T> Disc<(),T> for UnitDisc {
+
+    fn disc( &self, pairs : ~[((),T)] ) -> ~[~[T]] {
+        ~[ vec_map_move( pairs, |(_,x)| x ) ]
+    }
+
 }
 
 struct PairDisc<A,B>(A,B);
@@ -138,47 +144,6 @@ macro_rules! make_cast_disc {
     }
 }
 
-struct U8Disc;
-struct U16Disc;
-struct U32Disc;
-struct U64Disc;
-struct UIntDisc;
-
-struct I8Disc;
-struct I16Disc;
-struct I32Disc;
-struct I64Disc;
-struct IntDisc;
-
-impl<T> Disc<u8,T> for U8Disc {
-
-    fn disc( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
-        let mut buckets = do vec::build_sized(256) |push| {
-            for _ in range(0,256) {
-                push(~[]);
-            }
-        };
-        for (k,v) in pairs.move_iter() {
-            buckets[k].push(v);
-        }
-        do buckets.retain |bucket| { bucket.len() > 0 };
-        buckets
-    }
-
-}
-
-make_uint_disc!(U16Disc,u16,U8Disc,u8,1u16<<8)
-make_uint_disc!(U32Disc,u32,U16Disc,u16,1u32<<16)
-make_uint_disc!(U64Disc,u64,U32Disc,u32,1u64<<32)
-
-make_int_disc!(I8Disc,i8,U8Disc,u8)
-make_int_disc!(I16Disc,i16,U16Disc,u16)
-make_int_disc!(I32Disc,i32,U32Disc,u32)
-make_int_disc!(I64Disc,i64,U64Disc,u64)
-
-make_cast_disc!(IntDisc,int,I64Disc,i64)
-make_cast_disc!(UIntDisc,uint,U64Disc,u64)
-
 struct IterDisc<D>{ elem: D }
 
 impl<K,V,I:Iterator<K>,D:Disc<K,(I,V)>>
@@ -209,30 +174,6 @@ Disc<I,V> for IterDisc<D> {
         }
         sorted
 
-        // let mut done = ~[];
-        // let mut todo = ~[pairs];
-        // while( todo.len() > 0 ) {
-        //     let mut new_todo = ~[];
-        //     for group in todo.move_iter() {
-        //         let mut done_group = ~[];
-        //         let mut work_group = ~[];
-        //         for (i0,v) in group.move_iter() {
-        //             let mut i = i0;
-        //             match i.next() {
-        //                 None => { done_group.push(v) }
-        //                 Some(e) => { work_group.push( (e,(i,v)) ) }
-        //             }
-        //         }
-        //         if( done_group.len() > 0 ) {
-        //             done.push(done_group);
-        //         }
-        //         let todo_groups = self.elem.disc(work_group);
-        //         new_todo.push_all_move( todo_groups );
-        //     }
-        //     todo = new_todo;
-        // }
-        // done
-
     }
     
 }
@@ -259,68 +200,9 @@ Disc<~[K],V> for OwnedVecDisc<D> {
 
 }
 
-struct VecDisc<D>{ elem: D }
-
-impl<'self,K:Clone,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
-Disc<&'self[K],V> for VecDisc<D> {
-
-    fn disc( &self, pairs : ~[(&[K],V)] ) -> ~[~[V]] {
-        MapDisc{
-            key: |x:&[K]| x.to_owned(),
-            disc: OwnedVecDisc{ elem: &self.elem }
-        }.disc( pairs )
-    }
-
-}
-
-struct CharDisc;
-struct StrDisc;
-struct OwnedStrDisc;
-
-impl<T> Disc<char,T> for CharDisc {
-
-    fn disc( &self, pairs : ~[(char,T)] ) -> ~[~[T]] {
-        MapDisc{
-            key: |c:char| c as u32,
-            disc: U32Disc
-        }.disc( pairs )
-    }
-
-}
-
-impl<'self,V> Disc<&'self str,V> for StrDisc {
-
-    fn disc( &self, pairs : ~[(&str,V)] ) -> ~[~[V]] {
-        let iter_disc = IterDisc{ elem: CharDisc };
-        let str_iter = |s:&str| s.iter();
-        let map_disc = MapDisc{ key: str_iter, disc: iter_disc };
-        map_disc.disc( pairs )
-    }
-
-}
-
-impl<V> Disc<~str,V> for OwnedStrDisc {
-
-    fn disc( &self, pairs : ~[(~str,V)] ) -> ~[~[V]] {
-        let mut strs = ~[];
-        let mut vals = ~[];
-        for (k,v) in pairs.move_iter() {
-            strs.push(k);
-            vals.push(v);
-        }
-        let mut slices = ~[];
-        for (k,v) in strs.iter().zip(vals.move_iter()) {
-            slices.push( (k.as_slice(), v) );
-        }
-        StrDisc.disc( slices )
-    }
-
-}
-
 #[deriving (Clone,ToStr)]
 enum Tree {
-    Integer(int),
-    String(~str),
+    Unit,
     Node(~[Tree])
 }
 
@@ -329,38 +211,32 @@ struct TreeDisc;
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let mut ints = ~[];
-        let mut strs = ~[];
+        let mut units = ~[];
         let mut nodes = ~[];
         for (k,v) in pairs.move_iter() {
             match k {
-                Integer(i) => { ints.push( (i,v) ) }
-                String(s) => { strs.push( (s,v) ) }
+                Unit => { units.push( ((),v) ) }
                 Node(vec) => { nodes.push( (vec,v) ) }
             }
         }
         let mut sorted = ~[];
-        sorted.push_all_move( IntDisc.disc( ints ) );
-        sorted.push_all_move( OwnedStrDisc.disc( strs ) );
+        sorted.push_all_move( UnitDisc.disc( units ) );
         sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc( nodes ) );
         sorted
     }
 
 }
 
-fn i( i : int ) -> Tree { Integer(i) }
-fn s( s : ~str ) -> Tree { String(s) }
+fn u() -> Tree { Unit }
 fn n( n : ~[Tree] ) -> Tree { Node(n) }
 
 fn main () {
     let input =
-        ~[i(3),
-          n(~[i(3), s(~"point"), i(1), i(4)]),
-          s(~"."),
-          n(~[i(3), s(~"."), i(1), i(4)]),
-          i(1),
-          n(~[i(3), s(~"."), i(1), i(4), i(5), i(6)]),
-          i(4)];
+        ~[n(~[u(), u()]),
+          u(),
+          n(~[u(), u(), u()]),
+          u(),
+          n(~[u()])];
     println( input.to_str() );
     let output = disc_sort( TreeDisc, input );
     println( output.to_str() );
