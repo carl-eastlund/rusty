@@ -5,6 +5,8 @@ use std::i16;
 use std::i32;
 use std::i64;
 
+type MvIter<T> = vec::MoveIterator<T>;
+
 fn vec_map<A,B>( xs : &[A], f : &fn(&A)->B ) -> ~[B] {
     let mut ys = vec::with_capacity(xs.len());
     for x in xs.iter() {
@@ -247,7 +249,7 @@ impl<'self,K,V,D:Disc<K,V>> Disc<K,V> for &'self D {
 
 struct OwnedVecDisc<D>{ elem: D }
 
-impl<K,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
+impl<K,V,D:Disc<K,(MvIter<K>,V)>>
 Disc<~[K],V> for OwnedVecDisc<D> {
 
     fn disc( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
@@ -261,7 +263,7 @@ Disc<~[K],V> for OwnedVecDisc<D> {
 
 struct VecDisc<D>{ elem: D }
 
-impl<'self,K:Clone,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
+impl<'self,K:Clone,V,D:Disc<K,(MvIter<K>,V)>>
 Disc<&'self[K],V> for VecDisc<D> {
 
     fn disc( &self, pairs : ~[(&[K],V)] ) -> ~[~[V]] {
@@ -325,10 +327,49 @@ enum Tree {
 }
 
 struct TreeDisc;
+struct PushTreeDisc;
+struct NestTreeDisc;
+
+type Push<T> = (MvIter<Tree>,Nest<T>);
+type Nest<T> = (~[MvIter<Tree>],T);
 
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
+        let nested = do vec_map_move( pairs ) |(k,v)| { (k,(~[],v)) };
+        let sorted = NestTreeDisc.disc( nested );
+        let lifted = do vec_map_move( sorted ) |vs| {
+            do vec_map_move( vs ) |(_,v)| { v }
+        };
+        lifted
+    }
+
+}
+
+impl<T> Disc<Tree,Push<T>> for PushTreeDisc {
+
+    fn disc( &self, pairs : ~[(Tree,Push<T>)] ) -> ~[~[Push<T>]] {
+        let nested = do vec_map_move( pairs ) |(k,(i,(is,v)))| {
+            let mut iters = is;
+            iters.push(i);
+            (k,(iters,v))
+        };
+        let sorted = NestTreeDisc.disc( nested );
+        let lifted = do vec_map_move( sorted ) |vs| {
+            do vec_map_move( vs ) |(is,v)| {
+                let mut iters = is;
+                let i = iters.pop();
+                (i,(iters,v))
+            }
+        };
+        lifted
+    }
+
+}
+
+impl<T> Disc<Tree,Nest<T>> for NestTreeDisc {
+
+    fn disc( &self, pairs : ~[(Tree,Nest<T>)] ) -> ~[~[Nest<T>]] {
         let mut ints = ~[];
         let mut strs = ~[];
         let mut nodes = ~[];
@@ -347,7 +388,8 @@ impl<T> Disc<Tree,T> for TreeDisc {
             sorted.push_all_move( OwnedStrDisc.disc(strs) );
         }
         if( nodes.len() > 0 ) {
-            sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc(nodes) );
+            sorted.push_all_move
+                ( OwnedVecDisc{ elem: PushTreeDisc }.disc(nodes) );
         }
         sorted
     }
