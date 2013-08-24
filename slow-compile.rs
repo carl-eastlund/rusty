@@ -1,17 +1,12 @@
 
-enum Tree { Node(~[Tree]) }
+struct Data(~Option<Data>);
 
-struct MacGuffin;
-
-impl<T> MacGuffin {
-
-    fn disc( &self, _ : ~[(Tree,T)] ) {
-        let todo_elems : ~[(Tree,(Option<Tree>,T))] = ~[];
-        MacGuffin.disc( todo_elems );
-    }
-
+fn generic<T>( _ : ~[(Data,T)] ) {
+    let rec : ~[(Data,(bool,T))] = ~[];
+    generic( rec );
 }
 
 fn main () {
-    let input : ~[(Tree,())] = ~[]; MacGuffin.disc(input);
+    let input : ~[(Data,())] = ~[];
+    generic(input);
 }
