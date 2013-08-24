@@ -57,14 +57,14 @@ fn disc_sort<T:Clone,D:Disc<T,T>>( d : D, xs : &[T] ) -> ~[T] {
     vec_collapse_move( groups )
 }
 
-struct Pair_Disc<A,B>(A,B);
+struct PairDisc<A,B>(A,B);
 
 impl<K1,K2,V,D1:Disc<K1,(K2,V)>,D2:Disc<K2,V>>
-Disc<(K1,K2),V> for Pair_Disc<D1,D2> {
+Disc<(K1,K2),V> for PairDisc<D1,D2> {
 
     fn disc( &self, pairs : ~[((K1,K2),V)] ) -> ~[~[V]] {
         match self {
-            &Pair_Disc(ref first, ref second) => {
+            &PairDisc(ref first, ref second) => {
                 let nested = do vec_map_move(pairs) |((k1,k2),v)| {
                     (k1,(k2,v))
                 };
@@ -79,9 +79,9 @@ Disc<(K1,K2),V> for Pair_Disc<D1,D2> {
 
 }
 
-struct Map_Disc<'self,A,B,D>{ key : &'self fn(A)->B, disc : D }
+struct MapDisc<'self,A,B,D>{ key : &'self fn(A)->B, disc : D }
 
-impl<'self,A,B,V,D:Disc<B,V>> Disc<A,V> for Map_Disc<'self,A,B,D> {
+impl<'self,A,B,V,D:Disc<B,V>> Disc<A,V> for MapDisc<'self,A,B,D> {
 
     fn disc( &self, pairs : ~[(A,V)] ) -> ~[~[V]] {
         let mapped = do vec_map_move(pairs) |(k,v)| { ((self.key)(k),v) };
@@ -103,9 +103,9 @@ macro_rules! make_uint_disc {
     ($name:ident,$big:ident,$help:ident,$lil:ident,$factor:expr) => {
         impl<T> Disc<$big,T> for $name {
             fn disc( &self, pairs : ~[($big,T)] ) -> ~[~[T]] {
-                Map_Disc{
+                MapDisc{
                     key: |x:$big| ((x/$factor) as $lil, (x%$factor) as $lil),
-                    disc: Pair_Disc($help,$help)
+                    disc: PairDisc($help,$help)
                 }.disc(pairs)
             }
         }
@@ -116,7 +116,7 @@ macro_rules! make_int_disc {
     ($name:ident,$i:ident,$help:ident,$u:ident) => {
         impl<T> Disc<$i,T> for $name {
             fn disc( &self, pairs : ~[($i,T)] ) -> ~[~[T]] {
-                Map_Disc{
+                MapDisc{
                     key: |x:$i| (x - $i::min_value) as $u,
                     disc: $help
                 }.disc(pairs)
@@ -129,7 +129,7 @@ macro_rules! make_cast_disc {
     ($name:ident,$from:ident,$help:ident,$to:ident) => {
         impl<T> Disc<$from,T> for $name {
             fn disc( &self, pairs : ~[($from,T)] ) -> ~[~[T]] {
-                Map_Disc{
+                MapDisc{
                     key: |x:$from| x as $to,
                     disc: $help
                 }.disc(pairs)
@@ -138,19 +138,19 @@ macro_rules! make_cast_disc {
     }
 }
 
-struct U8_Disc;
-struct U16_Disc;
-struct U32_Disc;
-struct U64_Disc;
-struct UInt_Disc;
+struct U8Disc;
+struct U16Disc;
+struct U32Disc;
+struct U64Disc;
+struct UIntDisc;
 
-struct I8_Disc;
-struct I16_Disc;
-struct I32_Disc;
-struct I64_Disc;
-struct Int_Disc;
+struct I8Disc;
+struct I16Disc;
+struct I32Disc;
+struct I64Disc;
+struct IntDisc;
 
-impl<T> Disc<u8,T> for U8_Disc {
+impl<T> Disc<u8,T> for U8Disc {
 
     fn disc( &self, pairs : ~[(u8,T)] ) -> ~[~[T]] {
         let mut buckets = do vec::build_sized(256) |push| {
@@ -167,22 +167,22 @@ impl<T> Disc<u8,T> for U8_Disc {
 
 }
 
-make_uint_disc!(U16_Disc,u16,U8_Disc,u8,1u16<<8)
-make_uint_disc!(U32_Disc,u32,U16_Disc,u16,1u32<<16)
-make_uint_disc!(U64_Disc,u64,U32_Disc,u32,1u64<<32)
+make_uint_disc!(U16Disc,u16,U8Disc,u8,1u16<<8)
+make_uint_disc!(U32Disc,u32,U16Disc,u16,1u32<<16)
+make_uint_disc!(U64Disc,u64,U32Disc,u32,1u64<<32)
 
-make_int_disc!(I8_Disc,i8,U8_Disc,u8)
-make_int_disc!(I16_Disc,i16,U16_Disc,u16)
-make_int_disc!(I32_Disc,i32,U32_Disc,u32)
-make_int_disc!(I64_Disc,i64,U64_Disc,u64)
+make_int_disc!(I8Disc,i8,U8Disc,u8)
+make_int_disc!(I16Disc,i16,U16Disc,u16)
+make_int_disc!(I32Disc,i32,U32Disc,u32)
+make_int_disc!(I64Disc,i64,U64Disc,u64)
 
-make_cast_disc!(Int_Disc,int,I64_Disc,i64)
-make_cast_disc!(UInt_Disc,uint,U64_Disc,u64)
+make_cast_disc!(IntDisc,int,I64Disc,i64)
+make_cast_disc!(UIntDisc,uint,U64Disc,u64)
 
-struct Iter_Disc<D>{ elem: D }
+struct IterDisc<D>{ elem: D }
 
 impl<K,V,I:Iterator<K>,D:Disc<K,(I,V)>>
-Disc<I,V> for Iter_Disc<D> {
+Disc<I,V> for IterDisc<D> {
 
     fn disc( &self, pairs : ~[(I,V)] ) -> ~[~[V]] {
 
@@ -245,61 +245,61 @@ impl<'self,K,V,D:Disc<K,V>> Disc<K,V> for &'self D {
 
 }
 
-struct Owned_Vec_Disc<D>{ elem: D }
+struct OwnedVecDisc<D>{ elem: D }
 
 impl<K,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
-Disc<~[K],V> for Owned_Vec_Disc<D> {
+Disc<~[K],V> for OwnedVecDisc<D> {
 
     fn disc( &self, pairs : ~[(~[K],V)] ) -> ~[~[V]] {
-        let iter_disc = Iter_Disc{ elem: &self.elem };
+        let iter_disc = IterDisc{ elem: &self.elem };
         let vec_iter = |v:~[K]| v.move_iter();
-        let vec_disc = Map_Disc{ key: vec_iter, disc: iter_disc };
+        let vec_disc = MapDisc{ key: vec_iter, disc: iter_disc };
         vec_disc.disc(pairs)
     }
 
 }
 
-struct Vec_Disc<D>{ elem: D }
+struct VecDisc<D>{ elem: D }
 
 impl<'self,K:Clone,V,D:Disc<K,(vec::MoveIterator<K>,V)>>
-Disc<&'self[K],V> for Vec_Disc<D> {
+Disc<&'self[K],V> for VecDisc<D> {
 
     fn disc( &self, pairs : ~[(&[K],V)] ) -> ~[~[V]] {
-        Map_Disc{
+        MapDisc{
             key: |x:&[K]| x.to_owned(),
-            disc: Owned_Vec_Disc{ elem: &self.elem }
+            disc: OwnedVecDisc{ elem: &self.elem }
         }.disc( pairs )
     }
 
 }
 
-struct Char_Disc;
-struct Str_Disc;
-struct Owned_Str_Disc;
+struct CharDisc;
+struct StrDisc;
+struct OwnedStrDisc;
 
-impl<T> Disc<char,T> for Char_Disc {
+impl<T> Disc<char,T> for CharDisc {
 
     fn disc( &self, pairs : ~[(char,T)] ) -> ~[~[T]] {
-        Map_Disc{
+        MapDisc{
             key: |c:char| c as u32,
-            disc: U32_Disc
+            disc: U32Disc
         }.disc( pairs )
     }
 
 }
 
-impl<'self,V> Disc<&'self str,V> for Str_Disc {
+impl<'self,V> Disc<&'self str,V> for StrDisc {
 
     fn disc( &self, pairs : ~[(&str,V)] ) -> ~[~[V]] {
-        let iter_disc = Iter_Disc{ elem: Char_Disc };
+        let iter_disc = IterDisc{ elem: CharDisc };
         let str_iter = |s:&str| s.iter();
-        let map_disc = Map_Disc{ key: str_iter, disc: iter_disc };
+        let map_disc = MapDisc{ key: str_iter, disc: iter_disc };
         map_disc.disc( pairs )
     }
 
 }
 
-impl<V> Disc<~str,V> for Owned_Str_Disc {
+impl<V> Disc<~str,V> for OwnedStrDisc {
 
     fn disc( &self, pairs : ~[(~str,V)] ) -> ~[~[V]] {
         let mut strs = ~[];
@@ -312,14 +312,14 @@ impl<V> Disc<~str,V> for Owned_Str_Disc {
         for (k,v) in strs.iter().zip(vals.move_iter()) {
             slices.push( (k.as_slice(), v) );
         }
-        Str_Disc.disc( slices )
+        StrDisc.disc( slices )
     }
 
 }
 
-#[deriving (ToStr)]
+#[deriving (Clone,ToStr)]
 enum Tree {
-    Number(int),
+    Integer(int),
     String(~str),
     Node(~[Tree])
 }
@@ -329,32 +329,39 @@ struct TreeDisc;
 impl<T> Disc<Tree,T> for TreeDisc {
 
     fn disc( &self, pairs : ~[(Tree,T)] ) -> ~[~[T]] {
-        let mut nums = ~[];
+        let mut ints = ~[];
         let mut strs = ~[];
         let mut nodes = ~[];
         for (k,v) in pairs.move_iter() {
             match k {
-                Number(i) => { nums.push( (i,v) ) }
+                Integer(i) => { ints.push( (i,v) ) }
                 String(s) => { strs.push( (s,v) ) }
                 Node(vec) => { nodes.push( (vec,v) ) }
             }
         }
         let mut sorted = ~[];
-        sorted.push_all_move( Int_Disc.disc( nums ) );
-        sorted.push_all_move( Owned_Str_Disc.disc( strs ) );
-        sorted.push_all_move( Owned_Vec_Disc{ elem: TreeDisc }.disc( nodes ) );
+        sorted.push_all_move( IntDisc.disc( ints ) );
+        sorted.push_all_move( OwnedStrDisc.disc( strs ) );
+        sorted.push_all_move( OwnedVecDisc{ elem: TreeDisc }.disc( nodes ) );
         sorted
     }
 
 }
 
+fn i( i : int ) -> Tree { Integer(i) }
+fn s( s : ~str ) -> Tree { String(s) }
+fn n( n : ~[Tree] ) -> Tree { Node(n) }
+
 fn main () {
-    let strs = &[&"batty",&"cat",&"bat",&"catch",&"batch",&"botch",&"car"];
-    println( strs.to_str() );
-    let sorted_strs = disc_sort( Str_Disc, strs );
-    println( sorted_strs.to_str() );
-    let vecs = &[&[2],&[1],&[2,1],&[1,2],&[1,0],&[3]];
-    println( vecs.to_str() );
-    let sorted_vecs = disc_sort( Vec_Disc{ elem: Int_Disc }, vecs );
-    println( sorted_vecs.to_str() );
+    let input =
+        ~[i(3),
+          n(~[i(3), s(~"point"), i(1), i(4)]),
+          s(~"."),
+          n(~[i(3), s(~"."), i(1), i(4)]),
+          i(1),
+          n(~[i(3), s(~"."), i(1), i(4), i(5), i(6)]),
+          i(4)];
+    println( input.to_str() );
+    let output = disc_sort( TreeDisc, input );
+    println( output.to_str() );
 }
